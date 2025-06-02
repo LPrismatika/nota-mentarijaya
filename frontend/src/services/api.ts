@@ -14,6 +14,11 @@ export const cekNota = async (id: number) => {
     return data.payload.datas;
 }
 
+export const unCekNota = async (id: number) => {
+    const {data} = await axios.put(`${BASE_URL}/nota/${id}/uncek`)
+    return data.payload.datas;
+}
+
 export const printNota = async (id: number) => {
     const {data} = await axios.put(`${BASE_URL}/nota/${id}/print`)
     return data.payload.datas;

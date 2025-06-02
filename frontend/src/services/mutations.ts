@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { cekNota, createDetailNota, createNota, deleteDetailNota, printNota, updateDetailNota, updateNota } from "./api";
+import { cekNota, createDetailNota, createNota, deleteDetailNota, printNota, unCekNota, updateDetailNota, updateNota } from "./api";
 import type { Nota, NotaPayload } from "@/types/nota";
 import type { DetailNota } from "@/types/detailNota";
 
@@ -91,6 +91,21 @@ export function useCekNota() {
   return useMutation({
     mutationKey: ["cekNota"],
     mutationFn: (id: number) => cekNota(id),
+    onError: (error) => {
+      console.error("Error cek nota:", error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["nota"] });
+    },
+  });
+}
+
+export function useUnCekNota() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["cekNota"],
+    mutationFn: (id: number) => unCekNota(id),
     onError: (error) => {
       console.error("Error cek nota:", error);
     },

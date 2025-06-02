@@ -1,5 +1,4 @@
 import { useGetAllNota } from "@/services/queries";
-// import { Nota } from "@/types/nota";
 import React from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -13,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Check, EyeIcon, Loader, PlusIcon, Square, SquareCheckBig, Trash2, XIcon } from "lucide-react";
 import Swal from "sweetalert2";
-import { useCekNota, useDeleteDetailNota } from "@/services/mutations";
+import { useCekNota, useDeleteDetailNota, useUnCekNota } from "@/services/mutations";
 import { useQueryClient } from "@tanstack/react-query";
 
 const NotaList = () => {
@@ -35,7 +34,7 @@ const NotaList = () => {
   };
 
   const handleNavigate = (id: number) => {
-    navigate(`/${id}/preview-nota`);
+    navigate(`/${id}/detail-nota`);
   };
 
   const handleDelete = (id: number) => {
@@ -65,19 +64,29 @@ const NotaList = () => {
 
   const CheckingButton = ({ id, cek }) => {
     const cekNotaMutation = useCekNota();
-    const isLoading = cekNotaMutation.isPending;
+    const uncekNotaMutation = useUnCekNota();
+  
+    const isCekLoading = cekNotaMutation.isPending && cekNotaMutation.variables === id;
+    const isUncekLoading = uncekNotaMutation.isPending && uncekNotaMutation.variables === id;
+    const isLoading = isCekLoading || isUncekLoading;
+  
     const handleCekClick = () => {
-      if (cek === 0 && !isLoading) {
+      if (isLoading) return;
+  
+      if (cek === 0) {
         cekNotaMutation.mutate(id);
+      } else if (cek === 1) {
+        uncekNotaMutation.mutate(id);
       }
     };
+  
     return (
       <button
         onClick={handleCekClick}
-        disabled={cek === 1 || isLoading}
+        disabled={isLoading}
         className="b-white"
       >
-        {isLoading && cekNotaMutation.variables === id ? (
+        {isLoading ? (
           <Loader />
         ) : cek === 1 ? (
           <SquareCheckBig />
@@ -87,6 +96,7 @@ const NotaList = () => {
       </button>
     );
   };
+  
 
   const sortedData = React.useMemo(() => {
     if (!data) return [];
