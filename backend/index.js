@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const port = 3000;
+const port = 3001;
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const db = require("./database/db");
@@ -58,7 +58,7 @@ app.get("/nota/next-number", (req, res) => {
 
   const sql = `
     SELECT COUNT(*) AS count FROM nota 
-    WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? AND status != 0
+    WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?
   `;
 
   db.query(sql, [now.getMonth() + 1, now.getFullYear()], (err, results) => {
