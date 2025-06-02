@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import  { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Swal from "sweetalert2";
@@ -17,15 +17,14 @@ export type BarangDetail = {
   qty_isi: number;
   nama_isi: string;
   harga: number;
+  total: number;
   diskon: number[];
 };
 
 const AddAll = () => {
   const formatDate = (date) => format(date, "yyyy-MM-dd");
-
   const now = new Date();
   const tempo = addMonths(now, 2);
-
   const { register, handleSubmit, reset, setValue,  formState: { errors } } = useForm({ 
     resolver: zodResolver(notaSchema),
     defaultValues: {
@@ -37,6 +36,30 @@ const AddAll = () => {
     },
   });
 
+  const getDiskonBertumpuk = (hargaAwal: number, diskonList?: number[]) => {
+    if (!Array.isArray(diskonList) || diskonList.length === 0) return hargaAwal;
+    return diskonList.reduce((harga, diskon) => {
+      const persen = isNaN(diskon) ? 0 : diskon;
+      return harga - harga * (persen / 100);
+    }, hargaAwal);
+  };
+
+  const normalizeNumber = (val: string | number): number => {
+    if (typeof val === "string") {
+      return parseFloat(val.replace(",", ".")) || 0;
+    }
+    return Number(val) || 0;
+  };
+
+  function formatRibuan(angka: number | string): string {
+    const num = typeof angka === "string" ? parseFloat(angka) : angka;
+    if (isNaN(num)) return "0";
+    return num.toLocaleString("id-ID", {
+      maximumFractionDigits: 2,
+    });
+  }
+
+  const inputNamaBarang = useRef<HTMLInputElement>(null);
   const [barang, setBarang] = useState<BarangDetail[]>([]);
   const [formDetail, setFormDetail] = useState<BarangDetail>({
     nama_barang: "",
@@ -45,10 +68,31 @@ const AddAll = () => {
     qty_isi: 0,
     nama_isi: "",
     harga: 0,
+    total: 0,
     diskon: [],
   });
 
+  const [diskonPersen, setDiskonPersen] = useState(0);
+  const [diskonRupiah, setDiskonRupiah] = useState(0);
   const { mutate: createNota } = useCreateNota();
+
+  const totalBarang = barang.map((item) => ({
+    ...item,
+    harga: normalizeNumber(item.harga),
+    total: getDiskonBertumpuk(
+      normalizeNumber(item.harga) *
+        normalizeNumber(item.coly) *
+        normalizeNumber(item.qty_isi),
+      item.diskon
+    ),
+  }));
+
+  const subtotal = totalBarang.reduce(
+    (sum, item) => normalizeNumber(sum) + normalizeNumber(item.total),
+    0
+  );
+  const totalHarga = subtotal - diskonRupiah;
+  const totalColy = totalBarang.reduce((sum, item) => sum + item.coly, 0);
 
   useEffect(() => {
     const fetchNoNota = async () => {
@@ -68,6 +112,11 @@ const AddAll = () => {
 
     const payload = {
       ...data,
+      subtotal,
+      diskon_persen: diskonPersen,
+      diskon_rupiah: diskonRupiah,
+      total_harga: totalHarga,
+      total_coly: totalColy,
       details: barang,
     };
 
@@ -78,6 +127,8 @@ const AddAll = () => {
         });
         reset();
         setBarang([]);
+        setDiskonPersen(0);
+        setDiskonRupiah(0);
       },
       onError: (error) => {
         if (axios.isAxiosError(error)) {
@@ -103,7 +154,16 @@ const AddAll = () => {
       qty_isi: 0,
       nama_isi: "",
       harga: 0,
+      total: 0,
       diskon: [],
+    });
+    inputNamaBarang.current?.focus();
+  };
+
+  const addDiscount = () => {
+    setFormDetail({
+      ...formDetail,
+      diskon: [...formDetail.diskon, 0],
     });
   };
 
@@ -189,6 +249,8 @@ const AddAll = () => {
               <th className="p-2 w-[12%]">Qty</th>
               <th className="p-2 w-[12%]">Total Qty</th>
               <th className="p-2 w-[8%] text-center">Harga</th>
+              <th className="p-2 w-[5%] text-center">Diskon</th>
+              <th className="p-2 w-[10%] text-center">Sub Total</th>
               <th className="p-2 w-[9%]">Aksi</th>
             </tr>
           </thead>
@@ -199,6 +261,7 @@ const AddAll = () => {
                 <td className="p-2 text-left">
                   <Input
                     value={item.nama_barang}
+                    ref={inputNamaBarang}
                     onChange={(e) => {
                       const newList = [...barang];
                       newList[index].nama_barang = e.target.value;
@@ -268,6 +331,45 @@ const AddAll = () => {
                     }}
                   />
                 </td>
+                <td className="p-2 text-right">
+                  {item.diskon.map((d, i) => (
+                    <Input
+                      key={i}
+                      type="text"
+                      className="w-full border px-2 py-1 mb-1 text-right"
+                      value={d?.toString().replace(".", ",") ?? ""}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const input = e.target.value;
+                        const stringWithDot = input.replace(",", ".");
+                        const value = parseFloat(stringWithDot);
+
+                        // Salin array diskon dan update nilai diskon ke-i
+                        const newDiskon = [...item.diskon];
+                        newDiskon[i] = isNaN(value) ? 0 : value;
+
+                        // Update data barang
+                        const newList = [...barang];
+                        newList[index].diskon = newDiskon;
+
+                        // Hitung ulang total
+                        const coly = parseFloat(newList[index].coly) || 0;
+                        const qty = parseFloat(newList[index].qty_isi) || 0;
+                        const harga = parseFloat(newList[index].harga) || 0;
+                        let total = coly * qty * harga;
+
+                        newDiskon.forEach((persen) => {
+                          total -= (total * persen) / 100;
+                        });
+
+                        newList[index].total = total;
+
+                        setBarang(newList);
+                      }}
+                    />
+                  ))}
+                </td>
+                <td className="p-2 text-right">{formatRibuan(item.total)}</td>
                 <td className="p-2 flex justify-center">
                   <button onClick={() => removeDetail(index)} className="b-delete">
                     <TrashIcon size={16} />
@@ -323,6 +425,33 @@ const AddAll = () => {
                   value={formDetail.harga}
                   onChange={(e) => setFormDetail({ ...formDetail, harga: parseFloat(e.target.value) || 0 })}
                 />
+              </td>
+              <td className="p-2 text-center">
+                <Input
+                  type="number"
+                  value={formDetail.diskon.join(", ")}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    const newDiskon = e.target.value.split(",").map(d => parseFloat(d) || 0);
+                    setFormDetail({ ...formDetail, diskon: newDiskon });
+                  }}
+                />
+                <button
+                  className="b-white"
+                  onClick={addDiscount}
+                >
+                  <Plus />
+                </button>
+              </td>
+              <td className="p-2 text-right">
+                {formDetail.harga && formDetail.qty_isi
+                  ? formatRibuan(
+                      getDiskonBertumpuk(
+                        formDetail.harga * formDetail.coly * formDetail.qty_isi,
+                        formDetail.diskon
+                      )
+                    )
+                  : 0}
               </td>
               <td className="p-2 text-center">
                 <button onClick={addDetail} className="bg-blue-500 text-white px-2 py-1 rounded">

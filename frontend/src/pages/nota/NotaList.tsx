@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { EyeIcon, PlusIcon, Trash2 } from "lucide-react";
+import { Check, EyeIcon, Loader, PlusIcon, Square, SquareCheckBig, Trash2, XIcon } from "lucide-react";
 import Swal from "sweetalert2";
-import { useDeleteDetailNota } from "@/services/mutations";
+import { useCekNota, useDeleteDetailNota } from "@/services/mutations";
 import { useQueryClient } from "@tanstack/react-query";
 
 const NotaList = () => {
@@ -63,14 +63,39 @@ const NotaList = () => {
     });
   };
 
+  const CheckingButton = ({ id, cek }) => {
+    const cekNotaMutation = useCekNota();
+    const isLoading = cekNotaMutation.isPending;
+    const handleCekClick = () => {
+      if (cek === 0 && !isLoading) {
+        cekNotaMutation.mutate(id);
+      }
+    };
+    return (
+      <button
+        onClick={handleCekClick}
+        disabled={cek === 1 || isLoading}
+        className="b-white"
+      >
+        {isLoading && cekNotaMutation.variables === id ? (
+          <Loader />
+        ) : cek === 1 ? (
+          <SquareCheckBig />
+        ) : (
+          <Square />
+        )}
+      </button>
+    );
+  };
+
   const sortedData = React.useMemo(() => {
     if (!data) return [];
 
     return [...data]
       .filter((item) => item.status !== 0)
       .sort((a, b) => {
-        const dateA = new Date(a.tanggal);
-        const dateB = new Date(b.tanggal);
+        const dateA = new Date(a.updated_at).getTime();
+        const dateB = new Date(b.updated_at).getTime();
         return dateB - dateA;
       });
   }, [data]);
@@ -96,6 +121,8 @@ const NotaList = () => {
               <TableCell className="p-2 font-semibold text-center">No</TableCell>
               <TableCell className="p-2 font-semibold text-center">Pembeli</TableCell>
               <TableCell className="p-2 font-semibold text-center">Tanggal</TableCell>
+              <TableCell className="p-2 font-semibold text-center">Print</TableCell>
+              <TableCell className="p-2 font-semibold text-center">Cheking</TableCell>
               <TableCell className="p-2 font-semibold text-center">Actions</TableCell>
             </TableRow>
           </TableHeader>
@@ -106,6 +133,16 @@ const NotaList = () => {
                   <TableCell className="p-3 text-center">{index + 1}</TableCell>
                   <TableCell className="p-3 text-center">{nota.pembeli}</TableCell>
                   <TableCell className="p-3 text-center">{renderDate(nota.tanggal)}</TableCell>
+                  <TableCell className="p-3 text-center">
+                    {nota.print === 1 ? (
+                        <Check className='cek' />
+                      ) : (
+                        <XIcon className='cek' />
+                      )}
+                  </TableCell>
+                  <TableCell className="p-3 text-center">
+                    <CheckingButton id={nota.id} cek={nota.cek} />
+                  </TableCell>
                   <TableCell className="p-3 text-center">
                     <ToggleGroup type="single" className="center gap-2">
                       <ToggleGroupItem

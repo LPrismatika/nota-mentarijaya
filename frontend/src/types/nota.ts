@@ -13,6 +13,8 @@ export interface Nota {
     total_coly: number,
     jt_tempo: string,
     status: number,
+    print: number,
+    cek: number,
     created_at: string,
     updated_at: string,
     details: DetailNota[],

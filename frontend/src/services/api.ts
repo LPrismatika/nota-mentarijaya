@@ -9,6 +9,16 @@ export const getAllNota = async (): Promise<(Nota[])> => {
     return data.payload.datas;
 }
 
+export const cekNota = async (id: number) => {
+    const {data} = await axios.put(`${BASE_URL}/nota/${id}/cek`)
+    return data.payload.datas;
+}
+
+export const printNota = async (id: number) => {
+    const {data} = await axios.put(`${BASE_URL}/nota/${id}/print`)
+    return data.payload.datas;
+}
+
 export const getNotaNumber = async () => {
     const {data} = await axios.get(`${BASE_URL}/nota/next-number`);
     return data.payload.datas;

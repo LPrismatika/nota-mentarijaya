@@ -72,6 +72,12 @@ h1 {
   line-height: 1.1;
 }
 
+.b-white {
+  padding: 0.6em 1.2em;
+  background-color: #fafbfc; 
+  color: black;
+}
+
 .b-detail {
   padding: 0.6em 1.2em;
   background-color: #007bff; 
