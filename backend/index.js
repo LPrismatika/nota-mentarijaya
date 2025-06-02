@@ -14,6 +14,7 @@ app.use(
 
 app.use(bodyParser.json());
 
+// read Nota
 app.get("/", (req, res) => {
   const sql = "SELECT * FROM nota";
   db.query(sql, (error, result) => {
@@ -22,16 +23,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// mendapatkan semua deil nota
-app.get("/detail-notas", (req, res) => {
-  const sql = "SELECT * FROM detail_nota";
-  db.query(sql, (error, result) => {
-    if (error) return response(400, error, "cannot get data", res);
-    response(200, result, "success get all detail-nota", res);
-  });
-});
-
-// mendapatkan detail sesuai nota id
+// Read detail sesuai nota id
 app.get("/detail-nota/:nota_id", (req, res) => {
   const { nota_id } = req.params;
 
@@ -51,6 +43,7 @@ app.get("/detail-nota/:nota_id", (req, res) => {
   });
 });
 
+// generate nomer nota
 app.get("/nota/next-number", (req, res) => {
   const now = new Date();
   const bulan = String(now.getMonth() + 1).padStart(2, '0');
@@ -227,7 +220,7 @@ app.put("/nota/:id", (req, res) => {
   });
 });
 
-// soft-delete, mengubah status jadi 0 ji
+// soft-delete, mengubah status jadi 0
 app.put("/nota/:id/status", (req, res) => {
   function getWIBDatetime6() {
     const now = new Date();
@@ -249,7 +242,7 @@ app.put("/nota/:id/status", (req, res) => {
   });
 });
 
-//fungsi cek
+// status checking nota
 app.put("/nota/:id/cek", (req, res) => {
   const { id } = req.params;
   const sql = "UPDATE nota SET cek = 1 WHERE id = ?";
@@ -259,7 +252,7 @@ app.put("/nota/:id/cek", (req, res) => {
   });
 });
 
-//fungsi print
+// status print
 app.put("/nota/:id/print", (req, res) => {
   const { id } = req.params;
   const sql = "UPDATE nota SET print = 1 WHERE id = ?";
@@ -372,7 +365,7 @@ app.post("/nota", (req, res) => {
   });
 });
 
-//add detail saja 
+//add detail saja (popup preview)
 app.post("/detail-nota", (req, res) => {
   function getWIBDatetime6() {
     const now = new Date();
@@ -414,8 +407,7 @@ app.post("/detail-nota", (req, res) => {
   );
 });
 
-
-// edit detail nota (validasi nota_id harus ada)
+// edit detail nota (validasi nota_id harus ada) (save all)
 app.put("/detail-nota/:id", (req, res) => {
   function getWIBDatetime6() {
     const now = new Date();
