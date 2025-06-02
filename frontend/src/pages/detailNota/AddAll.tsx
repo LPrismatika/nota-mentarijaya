@@ -332,42 +332,24 @@ const AddAll = () => {
                   />
                 </td>
                 <td className="p-2 text-right">
-                  {item.diskon.map((d, i) => (
-                    <Input
-                      key={i}
-                      type="text"
-                      className="w-full border px-2 py-1 mb-1 text-right"
-                      value={d?.toString().replace(".", ",") ?? ""}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const input = e.target.value;
-                        const stringWithDot = input.replace(",", ".");
-                        const value = parseFloat(stringWithDot);
-
-                        // Salin array diskon dan update nilai diskon ke-i
-                        const newDiskon = [...item.diskon];
-                        newDiskon[i] = isNaN(value) ? 0 : value;
-
-                        // Update data barang
-                        const newList = [...barang];
-                        newList[index].diskon = newDiskon;
-
-                        // Hitung ulang total
-                        const coly = parseFloat(newList[index].coly) || 0;
-                        const qty = parseFloat(newList[index].qty_isi) || 0;
-                        const harga = parseFloat(newList[index].harga) || 0;
-                        let total = coly * qty * harga;
-
-                        newDiskon.forEach((persen) => {
-                          total -= (total * persen) / 100;
-                        });
-
-                        newList[index].total = total;
-
-                        setBarang(newList);
-                      }}
-                    />
-                  ))}
+                  <Input
+                    type="number"
+                    value={item.diskon.join(", ")} 
+                    onChange={(e) => {
+                      const newDiskon = e.target.value.split(",").map(d => parseFloat(d) || 0);
+                      const newList = [...barang];
+                      newList[index].diskon = newDiskon;
+                      setBarang(newList);
+                    }}
+                  />
+                </td>
+                <td className="p-2 text-right">
+                  {getDiskonBertumpuk(
+                    item.harga * item.coly * item.qty_isi,
+                    item.diskon
+                  ).toLocaleString("id-ID", {
+                    maximumFractionDigits: 2,
+                  })}
                 </td>
                 <td className="p-2 text-right">{formatRibuan(item.total)}</td>
                 <td className="p-2 flex justify-center">
