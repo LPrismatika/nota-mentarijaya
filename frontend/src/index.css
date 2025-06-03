@@ -78,13 +78,40 @@ h1 {
   color: black;
 }
 
+.b-edit {
+  padding: 1em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  color: #f9f9f9;
+  background-color: #ead408;
+}
+.b-edit:hover {
+  border-color: #000000;
+}
+
+.b-simpan{
+  padding: 1em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  color: #f9f9f9;
+  background-color: #035703;
+}
+.b-batal{
+  padding: 0.55em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  color: #f9f9f9;
+  background-color: #353333;
+}
+
 .b-detail {
-  padding: 0.6em 1.2em;
+  padding: 1em 1.2em;
   background-color: #007bff; 
   color: white;
 }
+
 .b-delete {
-  padding: 0.6em 1.2em;
+  padding: 1em 1.2em;
   font-size: 1em;
   font-weight: 500;
   color: #f9f9f9;
@@ -92,6 +119,10 @@ h1 {
 }
 .b-delete:hover {
   border-color: #000000;
+}
+
+.calender {
+  @apply bg-white text-black border border-gray-300 shadow-sm;
 }
 
 button {
