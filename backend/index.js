@@ -165,7 +165,9 @@ app.put("/nota/:id", (req, res) => {
               nota_id,
               item.nama_barang,
               parseFloat(item.coly),
+              item.satuan_coly,
               parseFloat(item.qty_isi),
+              item.nama_isi,
               parseFloat(item.jumlah),
               parseFloat(item.harga),
               JSON.stringify(item.diskon),
@@ -246,6 +248,16 @@ app.put("/nota/:id/status", (req, res) => {
 app.put("/nota/:id/cek", (req, res) => {
   const { id } = req.params;
   const sql = "UPDATE nota SET cek = 1 WHERE id = ?";
+  db.query(sql, [id], (error, result) => {
+    if (error) return response(400, error, "Gagal update cek", res);
+    response(200, { affectedRows: result.affectedRows }, "Nota berhasil dicek dan siap print", res);
+  });
+});
+
+//fungsi cek 1 ke 0
+app.put("/nota/:id/uncek", (req, res) => {
+  const { id } = req.params;
+  const sql = "UPDATE nota SET cek = 0 WHERE id = ?";
   db.query(sql, [id], (error, result) => {
     if (error) return response(400, error, "Gagal update cek", res);
     response(200, { affectedRows: result.affectedRows }, "Nota berhasil dicek dan siap print", res);
