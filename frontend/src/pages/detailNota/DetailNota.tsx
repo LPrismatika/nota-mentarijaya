@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useGetAllNota, useGetDetailNota } from "@/services/queries";
-import { useDeleteDetailNota, useUpdateNota } from "@/services/mutations";
+import { useDeleteDetailNota, usePrintNota, useUpdateNota } from "@/services/mutations";
 import Swal from "sweetalert2";
 import { useQueryClient } from "@tanstack/react-query";
 import AddDetailModal from "./ModalAddDetail";
@@ -30,8 +30,10 @@ const DetailNota = () => {
   const { data: notaList } = useGetAllNota();
   const nota = notaList?.find((n) => n.id === parsedNotaId);
   const { data: detailsData } = useGetDetailNota(parsedNotaId!);
+  console.log(detailsData, "dataaaanyaaa manaaa");
   const { mutate: updateNotaMutate } = useUpdateNota();
   const { mutate: deleteDetail } = useDeleteDetailNota();
+  const { mutate: printNota } = usePrintNota()
 
   const formatDateToYMD = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -209,174 +211,197 @@ const DetailNota = () => {
     );
   };
 
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = (notaId: number) => {
+    printNota(notaId, {
+      onSuccess: () => {
+        // Jika print sukses, buka halaman print
+        window.open(`/nota/frontend/${notaId}/print`, "_blank");
+      },
+      onError: (error) => {
+        console.error("Gagal print nota:", error);
+      },
+    });
+  };
+
   return (
-    <div className="p-4 mx-8 text-lg uppercase">
-      <h1 className="text-2xl font-bold mb-12 text-center">Faktur</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 mb-4">
-        <div className="space-y-2">
-          <div className="flex gap-13 items-center">
-            <label>No Nota:</label>
-            <Input className="w-1/3" value={formData.no_nota} readOnly />
-          </div>
-          <div className="flex gap-15 items-center">
-            <label>Tanggal:</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="calender">
-                  <CalendarIcon className="mr-2 h-4 w-1/2" />
-                  {formData.tanggal
-                    ? format(new Date(formData.tanggal), "dd MMM yyyy")
-                    : "Pilih Tanggal"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start">                
-                <Calendar
-                  mode="single"
-                  selected={
-                    formData.tanggal ? new Date(formData.tanggal) : undefined
-                  }
-                  onSelect={(date) => handleDateChange("tanggal", date)}
-                  className="bg-white text-black [&_*]:!bg-white [&_*]:!text-black [&_.day-selected]:!bg-blue-500"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="flex gap-5 items-center">
-            <label>Jatuh Tempo:</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="calender">
-                  <CalendarIcon className="mr-4 h-4 w-1/2" />
-                  {formData.jt_tempo
-                    ? format(new Date(formData.jt_tempo), "dd MMM yyyy")
-                    : "Pilih Tanggal"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start">
-                <Calendar
-                  mode="single"
-                  selected={
-                    formData.jt_tempo ? new Date(formData.jt_tempo) : undefined
-                  }
-                  onSelect={(date) => handleDateChange("jt_tempo", date)}
-                  className="bg-white text-black [&_*]:!bg-white [&_*]:!text-black [&_.day-selected]:!bg-blue-500"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <div>
-            <label>Kepada Yth:</label>
-            <Input
-              name="pembeli"
-              value={formData.pembeli}
-              onChange={handleNotaChange}
-              placeholder="Masukkan Nama Pembeli"
-            />
-          </div>
-          <div>
-            <label>Alamat:</label>
-            <Input
-              name="alamat"
-              value={formData.alamat}
-              onChange={handleNotaChange}
-              placeholder="Masukkan Alamat"
-            />
-          </div>
-        </div>
-      </div>
+    <div className="mx-8 w-full text-lg uppercase">
 
-      <div className="flex gap-3 justify-end mb-5">
-        <AddDetailModal
-          notaId={parsedNotaId}
-          onAdd={(newDetail) => {
-            setDetails((prev) => [...prev, newDetail]); 
-          }}
-        />
+      <Button
+        className="flex justify-end no-print mt-8"
+        onClick={() => handlePrint(parsedNotaId!)}
+      >
+        Print Nota
+      </Button>
+
+      <div ref={printRef}>
+        <h1 className="text-2xl font-bold mb-12 text-center">Faktur</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 mb-4">
+          <div className="space-y-2">
+            <div className="flex gap-13 items-center">
+              <label>No Nota:</label>
+              <Input className="w-1/3" value={formData.no_nota} readOnly />
+            </div>
+            <div className="flex gap-15 items-center">
+              <label>Tanggal:</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="calender">
+                    <CalendarIcon className="mr-2 h-4 w-1/2" />
+                    {formData.tanggal
+                      ? format(new Date(formData.tanggal), "dd MMM yyyy")
+                      : "Pilih Tanggal"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start">                
+                  <Calendar
+                    mode="single"
+                    selected={
+                      formData.tanggal ? new Date(formData.tanggal) : undefined
+                    }
+                    onSelect={(date) => handleDateChange("tanggal", date)}
+                    className="bg-white text-black [&_*]:!bg-white [&_*]:!text-black [&_.day-selected]:!bg-blue-500"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex gap-5 items-center">
+              <label>Jatuh Tempo:</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="calender">
+                    <CalendarIcon className="mr-4 h-4 w-1/2" />
+                    {formData.jt_tempo
+                      ? format(new Date(formData.jt_tempo), "dd MMM yyyy")
+                      : "Pilih Tanggal"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      formData.jt_tempo ? new Date(formData.jt_tempo) : undefined
+                    }
+                    onSelect={(date) => handleDateChange("jt_tempo", date)}
+                    className="bg-white text-black [&_*]:!bg-white [&_*]:!text-black [&_.day-selected]:!bg-blue-500"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div>
+              <label>Kepada Yth:</label>
+              <Input
+                name="pembeli"
+                value={formData.pembeli}
+                onChange={handleNotaChange}
+                placeholder="Masukkan Nama Pembeli"
+              />
+            </div>
+            <div>
+              <label>Alamat:</label>
+              <Input
+                name="alamat"
+                value={formData.alamat}
+                onChange={handleNotaChange}
+                placeholder="Masukkan Alamat"
+              />
+            </div>
+          </div>
         </div>
 
-      <table className="min-w-full border uppercase rounded-lg">
-        <thead className="bg-gray-200">
-        <tr className="text-center">
-              <th className="p-2 w-[2%]">No</th>
-              <th className="p-2 w-[25%] text-left">Nama Barang</th>
-              <th className="p-2 w-[12%]">Coly</th>
-              <th className="p-2 w-[12%]">Qty</th>
-              <th className="p-2 w-[12%]">Total Qty</th>
-              <th className="p-2 w-[8%] text-center">Harga</th>
-              <th className="p-2 w-[8%] text-center">Diskon</th>
-              <th className="p-2 w-[12%] text-center">Sub Total</th>
-              <th className="p-2 w-[9%]">Aksi</th>
-            </tr>
-        </thead>
-        <tbody className="uppercase">
-        {details.map((item, index) => (
-            <tr key={index} className="border-t">
-              <td className="p-2">{index + 1}</td>
-              <td className="p-2">
-                {editIndex === index ? (
-                  <Input
-                    value={item.nama_barang}
-                    onChange={(e) => handleDetailChange(index, "nama_barang", e.target.value)}
-                  />
-                ) : (
-                  item.nama_barang
-                )}
-              </td>
-              <td className="p-2 text-right">
-                <div className="flex gap-2">
+        <div className="flex gap-3 justify-end mb-5">
+          <AddDetailModal
+            notaId={parsedNotaId}
+            onAdd={(newDetail) => {
+              setDetails((prev) => [...prev, newDetail]); 
+            }}
+          />
+          </div>
+
+        <table className="min-w-full border uppercase rounded-lg">
+          <thead className="bg-gray-200">
+          <tr className="text-center">
+                <th className="p-2 w-[2%]">No</th>
+                <th className="p-2 w-[25%] text-left">Nama Barang</th>
+                <th className="p-2 w-[12%]">Coly</th>
+                <th className="p-2 w-[12%]">Qty</th>
+                <th className="p-2 w-[12%]">Total Qty</th>
+                <th className="p-2 w-[8%] text-center">Harga</th>
+                <th className="p-2 w-[8%] text-center">Diskon</th>
+                <th className="p-2 w-[12%] text-center">Sub Total</th>
+                <th className="p-2 w-[9%]">Aksi</th>
+              </tr>
+          </thead>
+          <tbody className="uppercase">
+          {details.map((item, index) => (
+              <tr key={index} className="border-t">
+                <td className="p-2">{index + 1}</td>
+                <td className="p-2">
                   {editIndex === index ? (
-                    <>
-                      <Input
-                        type="number"
-                        value={item.coly}
-                        onChange={(e) => handleDetailChange(index, "coly", parseFloat(e.target.value) || 0)}
-                      />
-                      <Input
-                        type="text"
-                        value={item.satuan_coly}
-                        onChange={(e) => handleDetailChange(index, "satuan_coly", e.target.value)}
-                      />
-                    </>
+                    <Input
+                      value={item.nama_barang}
+                      onChange={(e) => handleDetailChange(index, "nama_barang", e.target.value)}
+                    />
                   ) : (
-                    <span>{item.coly} {item.satuan_coly}</span>
+                    item.nama_barang
                   )}
-                </div>
-              </td>
-              <td className="p-2 text-right">
-                <div className="flex gap-2">
+                </td>
+                <td className="p-2 text-right">
+                  <div className="flex gap-2">
+                    {editIndex === index ? (
+                      <>
+                        <Input
+                          type="number"
+                          value={item.coly}
+                          onChange={(e) => handleDetailChange(index, "coly", parseFloat(e.target.value) || 0)}
+                        />
+                        <Input
+                          type="text"
+                          value={item.satuan_coly}
+                          onChange={(e) => handleDetailChange(index, "satuan_coly", e.target.value)}
+                        />
+                      </>
+                    ) : (
+                      <span>{item.coly} {item.satuan_coly}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-2 text-right">
+                  <div className="flex gap-2">
+                    {editIndex === index ? (
+                      <>
+                        <Input
+                          type="number"
+                          value={item.qty_isi}
+                          onChange={(e) => handleDetailChange(index, "qty_isi", parseFloat(e.target.value) || 0)}
+                        />
+                        <Input
+                          type="text"
+                          value={item.nama_isi}
+                          onChange={(e) => handleDetailChange(index, "nama_isi", e.target.value)}
+                        />
+                      </>
+                    ) : (
+                      <span>{item.qty_isi} {item.nama_isi}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-2 text-right">{item.jumlah} {item.satuan_coly}</td>
+                <td className="p-2 text-right">
                   {editIndex === index ? (
-                    <>
-                      <Input
-                        type="number"
-                        value={item.qty_isi}
-                        onChange={(e) => handleDetailChange(index, "qty_isi", parseFloat(e.target.value) || 0)}
-                      />
-                      <Input
-                        type="text"
-                        value={item.nama_isi}
-                        onChange={(e) => handleDetailChange(index, "nama_isi", e.target.value)}
-                      />
-                    </>
+                    <Input
+                      type="number"
+                      value={item.harga}
+                      onChange={(e) => handleDetailChange(index, "harga", parseFloat(e.target.value) || 0)}
+                    />
                   ) : (
-                    <span>{item.qty_isi} {item.nama_isi}</span>
+                    item.harga.toLocaleString("id-ID")
                   )}
-                </div>
-              </td>
-              <td className="p-2 text-right">{item.jumlah} {item.satuan_coly}</td>
-              <td className="p-2 text-right">
-                {editIndex === index ? (
-                  <Input
-                    type="number"
-                    value={item.harga}
-                    onChange={(e) => handleDetailChange(index, "harga", parseFloat(e.target.value) || 0)}
-                  />
-                ) : (
-                  item.harga.toLocaleString("id-ID")
-                )}
-              </td>
-              <td className="p-2 text-center">
+                </td>
+                <td className="p-2 text-center">
                 {(() => {
                   let parsed: number[] = [];
 
@@ -391,182 +416,186 @@ const DetailNota = () => {
                     }
                   }
 
-                  // Tambahkan satu input kosong (NaN) di akhir
-                  const extendedParsed = [...parsed, NaN];
+                  const diskonRaw = Array.isArray(item.diskon_raw)
+                    ? item.diskon_raw
+                    : parsed.map((d) => d.toString().replace(".", ","));
 
                   if (editIndex === index) {
                     return (
-                      <div className="flex flex-col gap-1">
-                        {extendedParsed.map((d, i) => {
-                          const raw =
-                            item?.diskon_raw?.[i] ??
-                            (isNaN(d) ? "" : d.toString().replace(".", ","));
-
+                      <div className="flex items-center gap-1">
+                        {diskonRaw.map((raw, i) => {
                           return (
                             <Input
                               key={i}
                               type="text"
+                              className="w-10 text-right border px-2 py-1"
                               value={raw}
                               onFocus={(e) => e.target.select()}
                               onChange={(e) => {
                                 const input = e.target.value;
-                                const stringWithDot = input.replace(",", ".");
-                                const num = parseFloat(stringWithDot);
 
-                                const newDiskon = [...(item.diskon || [])];
-                                newDiskon[i] = isNaN(num) ? 0 : num;
+                                const updatedDiskonRaw = [...diskonRaw];
+                                updatedDiskonRaw[i] = input;
 
-                                // Pastikan diskon_raw memiliki panjang cukup
-                                const newDiskonRaw = [...(item.diskon_raw || [])];
-                                while (newDiskonRaw.length < extendedParsed.length) {
-                                  newDiskonRaw.push("");
-                                }
-                                newDiskonRaw[i] = input;
-
-                                // Simpan hanya angka valid
-                                const updatedDiskon = extendedParsed.map((_, j) => {
-                                  const raw = newDiskonRaw[j] || "";
-                                  const parsed = parseFloat(raw.replace(",", "."));
-                                  return isNaN(parsed) ? NaN : parsed;
+                                const updatedDiskon = updatedDiskonRaw.map((str) => {
+                                  const num = parseFloat(str.replace(",", "."));
+                                  return isNaN(num) ? 0 : num;
                                 });
 
-                                // Hapus trailing kosong jika tidak diisi
-                                while (
-                                  updatedDiskon.length > 1 &&
-                                  isNaN(updatedDiskon[updatedDiskon.length - 1]) &&
-                                  newDiskonRaw[updatedDiskon.length - 1].trim() === ""
-                                ) {
-                                  updatedDiskon.pop();
-                                  newDiskonRaw.pop();
-                                }
-
                                 handleDetailChange(item.id, "diskon", updatedDiskon);
-                                handleDetailChange(item.id, "diskon_raw", newDiskonRaw);
+                                handleDetailChange(item.id, "diskon_raw", updatedDiskonRaw);
+
+                                const coly = parseFloat(item.coly) || 0;
+                                const qty = parseFloat(item.qty_isi) || 0;
+                                const harga = parseFloat(item.harga) || 0;
+
+                                let total = coly * qty * harga;
+                                updatedDiskon.forEach((persen) => {
+                                  total -= (total * persen) / 100;
+                                });
+
+                                handleDetailChange(item.id, "total", total);
                               }}
-                              className="w-16 text-right"
                             />
                           );
                         })}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedDiskonRaw = [...diskonRaw, ""];
+                            const updatedDiskon = [...parsed, 0];
+
+                            handleDetailChange(item.id, "diskon", updatedDiskon);
+                            handleDetailChange(item.id, "diskon_raw", updatedDiskonRaw);
+                          }}
+                          className="b-white"
+                        >
+                          + 
+                        </button>
                       </div>
                     );
-                  } else {
-                    const displayed = parsed.filter((d) => !isNaN(d));
-                    return displayed.join(" + ");
                   }
+
+                  const displayed = parsed.filter((d) => !isNaN(d));
+                  return <span>{displayed.map((d) => `${d}`).join(" + ")}</span>;
                 })()}
-              </td>
 
 
-              <td className="px-5 text-right">
-                {item.total.toLocaleString("id-ID", { maximumFractionDigits: 2 })}
-              </td>
-              <td className="p-2 ">
-                <div className="flex gap-2 justify-end">
-                  {editIndex === index ? (
-                    <>
+                </td>
+
+
+                <td className="px-5 text-right">
+                  {item.total.toLocaleString("id-ID", { maximumFractionDigits: 2 })}
+                </td>
+                <td className="p-2 ">
+                  <div className="flex gap-2 justify-end">
+                    {editIndex === index ? (
+                      <>
+                        <Button
+                          className="b-simpan"
+                          size="sm"
+                          onClick={() => setEditIndex(null)}
+                        >
+                          <CheckIcon size={16} />
+                        </Button>
+                        <button onClick={handleCancel} className="b-batal">
+                          <XIcon size={16} />
+                        </button>
+                      </>
+                    ) : (
                       <Button
-                        className="b-simpan"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => setEditIndex(null)}
+                        onClick={() => setEditIndex(index)}
+                        className="b-edit"
                       >
-                        <CheckIcon size={16} />
+                        <PencilIcon size={16} />
                       </Button>
-                      <button onClick={handleCancel} className="b-batal">
-                        <XIcon size={16} />
-                      </button>
-                    </>
-                  ) : (
+                    )}
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditIndex(index)}
-                      className="b-edit"
+                      variant="destructive"
+                      className="b-delete"
+                      onClick={() => handleDeleteDetail(item.id)}
                     >
-                      <PencilIcon size={16} />
+                      <TrashIcon size={16} />
                     </Button>
-                  )}
-                  <Button
-                    variant="destructive"
-                    className="b-delete"
-                    onClick={() => handleDeleteDetail(item.id)}
-                  >
-                    <TrashIcon size={16} />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tr>
-          <td colSpan={7} className="text-right font-medium p-2">
-            Subtotal: 
-          </td>
-          <td className="text-right">
-            Rp.{" "}
-            {subtotal.toLocaleString("id-ID", { maximumFractionDigits: 2 })}
-          </td>
-          <td></td>
-        </tr>
-        <tr>
-          <td colSpan={7} className="text-right font-medium p-2">
-            Diskon: 
-          </td>
-          <td className="text-left">
-            <div className="flex items-center space-x-2">
-              <Input
-                className="w-20"
-                value={diskonPersen}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
-                  setDiskonPersen(val);
-                  setDiskonRupiah((subtotal * val) / 100);
-                }}
-                placeholder="Diskon %"
-                type="number"
-                />{" "}
-              <span>%</span>
-            </div>
-          </td>
-          <td>
-            <div className="flex items-center space-x-2">
-              <span>Rp</span>
-              <Input
-                className="w-20"
-                value={diskonRupiah}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => {
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tr>
+            <td colSpan={7} className="text-right font-medium p-2">
+              Subtotal: 
+            </td>
+            <td className="text-right">
+              Rp.{" "}
+              {subtotal.toLocaleString("id-ID", { maximumFractionDigits: 2 })}
+            </td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colSpan={7} className="text-right font-medium p-2">
+              Diskon: 
+            </td>
+            <td className="text-left">
+              <div className="flex items-center space-x-2">
+                <Input
+                  className="w-20"
+                  value={diskonPersen}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
                   const val = parseFloat(e.target.value) || 0;
-                  setDiskonRupiah(val);
-                  setDiskonPersen((val / subtotal) * 100);
-                }}
-                placeholder="Diskon Rp"
-                type="number"
-                />
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td colSpan={7} className="text-right font-medium p-2">
-            Total: 
-          </td>
-          <td className="font-bold p-2 text-right">
-            Rp.{" "}
-            {(subtotal - diskonRupiah).toLocaleString("id-ID", {
-              maximumFractionDigits: 2,
-            })}
-          </td>
-          <td>
-            <Button
-              onClick={handleUpdateAll}
-              className="flex gap-2 items-center"
-            >
-              <SaveIcon size={16} />
-              Save All
-            </Button>
-          </td>
-        </tr>
-      </table>
+                    setDiskonPersen(val);
+                    setDiskonRupiah((subtotal * val) / 100);
+                  }}
+                  placeholder="Diskon %"
+                  type="number"
+                  />{" "}
+                <span>%</span>
+              </div>
+            </td>
+            <td>
+              <div className="flex items-center space-x-2">
+                <span>Rp</span>
+                <Input
+                  className="w-20"
+                  value={diskonRupiah}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setDiskonRupiah(val);
+                    setDiskonPersen((val / subtotal) * 100);
+                  }}
+                  placeholder="Diskon Rp"
+                  type="number"
+                  />
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={7} className="text-right font-medium p-2">
+              Total: 
+            </td>
+            <td className="font-bold p-2 text-right">
+              Rp.{" "}
+              {(subtotal - diskonRupiah).toLocaleString("id-ID", {
+                maximumFractionDigits: 2,
+              })}
+            </td>
+            <td>
+              <Button
+                onClick={handleUpdateAll}
+                className="flex gap-2 items-center"
+              >
+                <SaveIcon size={16} />
+                Save All
+              </Button>
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
   );
 };

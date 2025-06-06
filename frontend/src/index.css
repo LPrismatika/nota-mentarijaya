@@ -3,6 +3,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@media print {
+  @page {
+    size: A6 landscape; 
+    margin: 10mm; 
+  }
+
+  body {
+    font-size: 12px; 
+  }
+
+  .no-print {
+    display: none !important; 
+  }
+
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* Agar hanya elemen dengan .print-area yang terlihat saat cetak */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -70,6 +106,10 @@ body {
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+}
+
+.icon {
+  @apply bg-white text-black ;
 }
 
 .b-white {

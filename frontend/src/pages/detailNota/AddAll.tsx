@@ -16,6 +16,7 @@ export type BarangDetail = {
   satuan_coly: string;
   qty_isi: number;
   nama_isi: string;
+  jumlah: number;
   harga: number;
   total: number;
   diskon: number[];
@@ -25,16 +26,6 @@ const AddAll = () => {
   const formatDate = (date) => format(date, "yyyy-MM-dd");
   const now = new Date();
   const tempo = addMonths(now, 2);
-  const { register, handleSubmit, reset, setValue,  formState: { errors } } = useForm({ 
-    resolver: zodResolver(notaSchema),
-    defaultValues: {
-      no_nota: "",
-      tanggal: formatDate(now),
-      jt_tempo: formatDate(tempo),
-      pembeli: "",
-      alamat: "",
-    },
-  });
 
   const getDiskonBertumpuk = (hargaAwal: number, diskonList?: number[]) => {
     if (!Array.isArray(diskonList) || diskonList.length === 0) return hargaAwal;
@@ -59,7 +50,18 @@ const AddAll = () => {
     });
   }
 
-  const inputNamaBarang = useRef<HTMLInputElement>(null);
+  const { register, handleSubmit, reset, setValue,  formState: { errors } } = useForm({ 
+    // resolver: zodResolver(notaSchema),
+    defaultValues: {
+      no_nota: "",
+      tanggal: formatDate(now),
+      jt_tempo: formatDate(tempo),
+      pembeli: "",
+      alamat: "",
+      details: [],
+    },
+  });
+
   const [barang, setBarang] = useState<BarangDetail[]>([]);
   const [formDetail, setFormDetail] = useState<BarangDetail>({
     nama_barang: "",
@@ -68,6 +70,7 @@ const AddAll = () => {
     qty_isi: 0,
     nama_isi: "",
     harga: 0,
+    jumlah: 0,
     total: 0,
     diskon: [],
   });
@@ -78,13 +81,11 @@ const AddAll = () => {
 
   const totalBarang = barang.map((item) => ({
     ...item,
-    harga: normalizeNumber(item.harga),
     total: getDiskonBertumpuk(
-      normalizeNumber(item.harga) *
-        normalizeNumber(item.coly) *
-        normalizeNumber(item.qty_isi),
+      normalizeNumber(item.harga) * normalizeNumber(item.coly) * normalizeNumber(item.qty_isi),
       item.diskon
     ),
+    diskon: JSON.stringify(item.diskon),
   }));
 
   const subtotal = totalBarang.reduce(
@@ -96,15 +97,16 @@ const AddAll = () => {
 
   useEffect(() => {
     const fetchNoNota = async () => {
-      const res = await fetch("http://localhost:3000/nota/next-number");
+      const res = await fetch("http://localhost:3001/nota/next-number");
       const data = await res.json();
-      setValue("no_nota", data.no_nota);
-    };
+      const noNotaFormatted = data.no_nota;
 
+      setValue("no_nota", noNotaFormatted);
+    };
     fetchNoNota();
   }, [setValue]);
 
-  const onSubmit = (data) => {
+  const onSubmit = (data) => {    
     if (barang.length === 0) {
       Swal.fire("Tidak ada detail barang yang ditambahkan.");
       return;
@@ -117,13 +119,13 @@ const AddAll = () => {
       diskon_rupiah: diskonRupiah,
       total_harga: totalHarga,
       total_coly: totalColy,
-      details: barang,
+      details: totalBarang,
     };
 
     createNota(payload, {
       onSuccess: () => {
         Swal.fire("Berhasil", "Nota berhasil dibuat", "success").then(() => {
-          window.location.href = "/";
+          window.location.href = "/nota/frontend";
         });
         reset();
         setBarang([]);
@@ -132,21 +134,31 @@ const AddAll = () => {
       },
       onError: (error) => {
         if (axios.isAxiosError(error)) {
-            Swal.fire(
-              "Gagal",
-              error.response?.data || "Terjadi kesalahan",
-              "error"
-            );
-          } else {
-            Swal.fire("Gagal", "Terjadi kesalahan yang tidak terduga", "error");
-          }
+          Swal.fire(
+            "Gagal",
+            error.response?.data || "Terjadi kesalahan",
+            "error"
+          );
+        } else {
+          Swal.fire("Gagal", "Terjadi kesalahan yang tidak terduga", "error");
+        }
       },
     });
+    console.log("PAYLOAD:", data);
     
   };
 
+  const inputNamaBarang = useRef<HTMLInputElement>(null);
+  const inputTanggal = useRef<HTMLInputElement>(null);
+  const inputTempo = useRef<HTMLInputElement>(null);
+
   const addDetail = () => {
-    setBarang([...barang, formDetail]);
+    const jumlah = formDetail.coly * formDetail.qty_isi;
+    const total = getDiskonBertumpuk(
+      formDetail.harga * jumlah,
+      formDetail.diskon
+    ).toFixed(2);
+    setBarang([...barang, { ...formDetail, jumlah, total }]);
     setFormDetail({
       nama_barang: "",
       coly: 0,
@@ -154,6 +166,7 @@ const AddAll = () => {
       qty_isi: 0,
       nama_isi: "",
       harga: 0,
+      jumlah: 0,
       total: 0,
       diskon: [],
     });
@@ -176,23 +189,31 @@ const AddAll = () => {
   return (
     <div className="p-4 mx-8 text-lg">
       <h1 className="text-2xl font-bold mb-12 text-center">Faktur</h1>
-     
-      <form onSubmit={handleSubmit(onSubmit)}>
+         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 mb-4">
           <div className="space-y-2">
             <div className="flex gap-8 items-center">
               <label>Nota:</label>
-              <Input {...register("no_nota")} disabled className="text-xl" />
+              <Input {...register("no_nota")} disabled className="text-xl w-1/3" />
             </div>
             <div className="flex gap-2 items-center">
               <label>Tanggal:</label>
               <div className="relative w-1/3">
                 <Input
                   {...register("tanggal")}
+                  ref={(el) => {
+                    register("tanggal").ref(el);
+                    inputTanggal.current = el;
+                  }}
                   type="date"
                   className="w-full border border-input rounded px-4 py-2 pr-10"
                 />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer" />
+                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground cursor-pointer"
+                onClick={() =>
+                  inputTanggal.current?.showPicker?.() ||
+                  inputTanggal.current?.focus()
+                }
+                />
               </div>
             </div>
             <div className="flex gap-5 items-center">
@@ -200,10 +221,19 @@ const AddAll = () => {
               <div className="relative w-1/3">
                 <Input
                   {...register("jt_tempo")}
+                  ref={(el) => {
+                    register("jt_tempo").ref(el);
+                    inputTempo.current = el;
+                  }}
                   type="date"
                   className="pr-10 border px-2 py-1 rounded"
                 />
-                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" />
+                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer" 
+                onClick={() =>
+                  inputTempo.current?.showPicker?.() ||
+                  inputTempo.current?.focus()
+                }
+                />
               </div>
             </div>
           </div>
@@ -233,11 +263,10 @@ const AddAll = () => {
         </div>
 
         <div className="flex justify-end mb-6">
-          <Button type="submit" className="text-xl px-4 py-5">
+          <Button type="submit" onClick={handleSubmit(onSubmit)} className="text-xl px-4 py-5">
             Simpan Nota
           </Button>
         </div>
-      </form>
       
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-left min-w-[800px] uppercase">
@@ -261,7 +290,6 @@ const AddAll = () => {
                 <td className="p-2 text-left">
                   <Input
                     value={item.nama_barang}
-                    ref={inputNamaBarang}
                     onChange={(e) => {
                       const newList = [...barang];
                       newList[index].nama_barang = e.target.value;
@@ -269,7 +297,6 @@ const AddAll = () => {
                     }}
                   />
                 </td>
-                {/* {errors.nama_barang && <p className="text-red-500 text-right w-2/5 text-sm mt-0">{errors.nama_barang.message}</p>} */}
                 <td className="p-2">
                     <div className="flex gap-2">
                     <Input
@@ -317,7 +344,7 @@ const AddAll = () => {
                         </div>
                 </td>
                 <td className="p-2">
-                  {item.coly * item.qty_isi} {item.satuan_coly}
+                  {item.jumlah} {item.satuan_coly}
                 </td>
                 <td className="p-2 text-right">
                   <Input
@@ -332,26 +359,42 @@ const AddAll = () => {
                   />
                 </td>
                 <td className="p-2 text-right">
-                  <Input
-                    type="number"
-                    value={item.diskon.join(", ")} 
-                    onChange={(e) => {
-                      const newDiskon = e.target.value.split(",").map(d => parseFloat(d) || 0);
-                      const newList = [...barang];
-                      newList[index].diskon = newDiskon;
-                      setBarang(newList);
-                    }}
-                  />
-                </td>
+                {item.diskon.map((d, i) => (
+                    <Input
+                      key={i}
+                      type="text"
+                      className="w-full border px-2 py-1 mb-1 text-right"
+                      value={d?.toString().replace(".", ",") ?? ""}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const input = e.target.value;
+                        const stringWithDot = input.replace(",", ".");
+                        const value = parseFloat(stringWithDot);
+
+                        const newDiskon = [...item.diskon];
+                        newDiskon[i] = isNaN(value) ? 0 : value;
+
+                        const newList = [...barang];
+                        newList[index].diskon = newDiskon;
+
+                        const coly = parseFloat(newList[index].coly) || 0;
+                        const qty = parseFloat(newList[index].qty_isi) || 0;
+                        const harga = parseFloat(newList[index].harga) || 0;
+                        let total = coly * qty * harga;
+
+                        newDiskon.forEach((persen) => {
+                          total -= (total * persen) / 100;
+                        });
+
+                        newList[index].total = total;
+
+                        setBarang(newList);
+                      }}
+                    />
+                  ))}
+                </td>                
                 <td className="p-2 text-right">
-                  {getDiskonBertumpuk(
-                    item.harga * item.coly * item.qty_isi,
-                    item.diskon
-                  ).toLocaleString("id-ID", {
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
-                <td className="p-2 text-right">{formatRibuan(item.total)}</td>
+                        {formatRibuan(item.total)}</td>
                 <td className="p-2 flex justify-center">
                   <button onClick={() => removeDetail(index)} className="b-delete">
                     <TrashIcon size={16} />
@@ -409,15 +452,25 @@ const AddAll = () => {
                 />
               </td>
               <td className="p-2 text-center">
-                <Input
-                  type="number"
-                  value={formDetail.diskon.join(", ")}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    const newDiskon = e.target.value.split(",").map(d => parseFloat(d) || 0);
-                    setFormDetail({ ...formDetail, diskon: newDiskon });
-                  }}
-                />
+              {formDetail.diskon.map((d, i) => (
+                  <input
+                    key={i}
+                    type="number"
+                    className="w-full border px-2 py-1 mb-1"
+                    value={d}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      const newDiskon = [...formDetail.diskon];
+                      newDiskon[i] = value;
+
+                      setFormDetail({
+                        ...formDetail,
+                        diskon: newDiskon,
+                      });
+                    }}
+                  />
+                ))}
                 <button
                   className="b-white"
                   onClick={addDiscount}
@@ -442,6 +495,70 @@ const AddAll = () => {
               </td>
             </tr>
           </tbody>
+          <tr className="text-right">
+              <td colSpan={7}>
+                <div className="my-1.5">Subtotal:</div>
+              </td>
+              <td>
+                {subtotal.toLocaleString("id-ID", {
+                  maximumFractionDigits: 2,
+                })}
+              </td>
+              <td></td>
+            </tr>
+            <tr className="text-right">
+              <td colSpan={7}>
+                <div className="my-1.5">
+                  <p>Diskon:</p>
+                </div>
+              </td>
+              <td>
+                <div className="flex justify-evenly">
+                  <Input
+                    className="w-18"
+                    value={diskonPersen}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setDiskonPersen(val);
+                      const rupiah = (subtotal * val) / 100;
+                      setDiskonRupiah(rupiah);
+                    }}
+                    placeholder="Diskon %"
+                    type="number"
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <span>%</span>
+                </div>
+              </td>
+              <td>
+                <div className="flex justify-evenly">
+                  <span>Rp</span>
+                  <Input
+                    className="w-25"
+                    value={diskonRupiah}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setDiskonRupiah(val);
+                      setDiskonPersen((val / subtotal) * 100);
+                    }}
+                    placeholder="Diskon Rp"
+                    type="number"
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
+              </td>
+            </tr>
+            <tr className="text-right">
+              <td colSpan={7}>
+                <div className="my-1.5">Total Harga:</div>
+              </td>
+              <td className="font-bold">
+                {totalHarga.toLocaleString("id-ID", {
+                  maximumFractionDigits: 2,
+                })}
+              </td>
+              <td></td>
+            </tr>
         </table>
       </div>
     </div>

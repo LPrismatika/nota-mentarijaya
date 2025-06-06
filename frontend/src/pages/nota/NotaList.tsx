@@ -111,7 +111,7 @@ const NotaList = () => {
   }, [data]);
 
   return (
-    <div className="container mx-auto max-w-5xl p-6 bg-white shadow-lg rounded-lg">
+    <div className="p-6 ">
       <h1 className="text-2xl font-bold mb-4 text-center">Daftar Nota</h1>
       
       <div className="flex justify-end mb-4">
@@ -125,7 +125,7 @@ const NotaList = () => {
       </div>
 
       <div className="overflow-x-auto">
-        <Table className="w-full border border-gray-200 rounded-md">
+        <Table className="border min-w-[900px] border-gray-200 rounded-md">
           <TableHeader className="bg-gray-100">
             <TableRow>
               <TableCell className="p-2 font-semibold text-center">No</TableCell>

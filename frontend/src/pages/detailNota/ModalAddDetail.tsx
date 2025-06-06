@@ -40,7 +40,7 @@ import {
         qty_isi: 0,
         nama_isi: "",
         harga: 0,
-        diskon: 0,
+        diskon: [],
         jumlah: 0,
         total: 0,
       },
@@ -51,11 +51,26 @@ import {
     const qty_isi = watch("qty_isi");
     const harga = watch("harga");
     const diskon = watch("diskon");
+
+    const getDiskonBertumpuk = (hargaAwal: number, diskonList?: number[]) => {
+      if (!Array.isArray(diskonList) || diskonList.length === 0) return hargaAwal;
+      return diskonList.reduce((harga, diskon) => {
+        const persen = isNaN(diskon) ? 0 : diskon;
+        return harga - harga * (persen / 100);
+      }, hargaAwal);
+    };
+
+    const addDiskon = () => {
+      const currentDiskon = watch("diskon") || [];
+      setValue("diskon", [...currentDiskon, 0]);
+    };
   
     // Hitung jumlah & total secara otomatis saat input berubah
     useEffect(() => {
       const jumlah = coly * qty_isi;
-      const total = jumlah * harga * (1 - (diskon || 0) / 100);
+      const hargaAkhir = getDiskonBertumpuk(harga, diskon);
+      const total = jumlah * hargaAkhir;
+    
       setValue("jumlah", jumlah || 0);
       setValue("total", total || 0);
     }, [coly, qty_isi, harga, diskon, setValue]);
@@ -64,6 +79,7 @@ import {
       const payload = {
         ...data,
         notaId: notaId ? Number(notaId) : undefined,
+        diskon: JSON.stringify(data.diskon),
       };
       
       
@@ -139,8 +155,26 @@ import {
                   </div>
                   <div className="flex flex-col">
                     <label className="text-sm font-semibold">Diskon (%)</label>
-                    <Input type="number" placeholder="Diskon" {...register("diskon", { valueAsNumber: true })} onFocus={(e) => e.target.select()}/>
+                    {watch("diskon")?.map((d, i) => (
+                      <Input
+                        key={i}
+                        type="number"
+                        className="mb-1"
+                        value={d}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          const updated = [...watch("diskon")];
+                          updated[i] = val;
+                          setValue("diskon", updated);
+                        }}
+                      />
+                    ))}
+                    <Button type="button" className="b-white" variant="outline" onClick={addDiskon}>
+                      + Tambah Diskon
+                    </Button>
                   </div>
+
                 </div>
             </div>
   
